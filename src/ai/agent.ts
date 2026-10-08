@@ -5,6 +5,7 @@ import { saveMemoryTool } from "../tools/memory.tool.js";
 import { searchTool } from "../tools/search.tool.js";
 import { timeTool } from "../tools/time.tool.js";
 import type { UltronXTool } from "../tools/types.js";
+import { normalizeMessageContent } from "../Utils/message-content.js";
 
 const tools: UltronXTool[] = [timeTool, searchTool, readUrl, saveMemoryTool];
 const toolDefinitions = tools.map((tool) => ({
@@ -18,7 +19,7 @@ export async function runUltronXAgent(history: UltronXMessage[], context: { user
     const messages: UltronXMessage[] = [{ role: "system", content: systemPrompt }, ...history];
     for (let iteration = 0; iteration < 5; iteration += 1) {
         const response = await openRouterChat(messages, { tools: toolDefinitions });
-        const content = response.content || "";
+        const content = normalizeMessageContent(response.content || "");
         if (content) callbacks.onToken?.(content);
         if (!response.tool_calls?.length) return content;
         messages.push({ role: "assistant", content, tool_calls: response.tool_calls });

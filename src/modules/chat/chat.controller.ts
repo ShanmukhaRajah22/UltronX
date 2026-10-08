@@ -1,10 +1,13 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../Utils/async-handler.js";
-import { apiSuccess } from "../../Utils/apiResponse.js";
+import { apiError, apiSuccess } from "../../Utils/apiResponse.js";
 import { chatService } from "./chat.service.js";
 
 export const generateChat = asyncHandler(async (req: Request, res: Response) => {
-    const content = req.body.content || req.body.message;
+    const content = req.body?.content || req.body?.message;
+    if (typeof content !== "string" || !content.trim()) {
+        throw apiError(400, "Message content is required");
+    }
     return apiSuccess(res, await chatService.generateChat({ userId: req.user.userId, content }), "Chat title generated and saved successfully", 201);
 });
 export const listChats = asyncHandler(async (req: Request, res: Response) =>

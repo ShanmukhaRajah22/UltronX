@@ -4,6 +4,7 @@ import { runUltronXAgent } from "../../ai/agent.js";
 import type { UltronXMessage } from "../../ai/model.js";
 import { MessageRepository } from "./message.repo.js";
 import { chatRepositary } from "../chat/chat.repo.js";
+import { normalizeMessageContent } from "../../Utils/message-content.js";
 
 export class MessageService {
     private messageRepo = new MessageRepository();
@@ -20,31 +21,40 @@ export class MessageService {
         return message;
     }
     private history(history: Array<{ role: string; content: string }>): UltronXMessage[] {
-        return history.map((message) => ({ role: message.role === "assistant" ? "assistant" : message.role === "system" ? "system" : "user", content: message.content }));
+        return history.map((message) => ({ role: message.role === "assistant" ? "assistant" : message.role === "system" ? "system" : "user", content: normalizeMessageContent(message.content) }));
     }
     async sendMessage(data: { chatId: string; content: string; userId: string }) {
         if (!data.content?.trim()) throw apiError(400, "Message content is required");
         await this.ownedChat(data.chatId, data.userId);
         const history = await this.messageRepo.findByChatId(data.chatId);
-        const userMessage = await this.messageRepo.create({ chatId: data.chatId, role: "user", content: data.content.trim() });
+        const userMessage = await this.messageRepo.create({ chatId: data.chatId, role: "user", content: normalizeMessageContent(data.content) });
         const response = await runUltronXAgent([...this.history(history), { role: "user", content: data.content.trim() }], { userId: data.userId, chatId: data.chatId });
-        const aiMessage = await this.messageRepo.create({ chatId: data.chatId, role: "assistant", content: response });
+        const aiMessage = await this.messageRepo.create({ chatId: data.chatId, role: "assistant", content: normalizeMessageContent(response) });
         return { userMessage, aiMessage };
     }
-    async getMessages(chatId: string, userId: string) { await this.ownedChat(chatId, userId); return this.messageRepo.findByChatId(chatId); }
-    async getMessage(messageId: string, userId: string) { return this.ownedMessage(messageId, userId); }
+    async getMessages(chatId: string, userId: string) {
+        await this.ownedChat(chatId, userId);
+        const messages = await this.messageRepo.findByChatId(chatId);
+        return messages.map((message) => ({ ...message, content: normalizeMessageContent(message.content) }));
+    }
+    async getMessage(messageId: string, userId: string) {
+        const message = await this.ownedMessage(messageId, userId);
+        return { ...message, content: normalizeMessageContent(message.content) };
+    }
     async updateMessage(messageId: string, userId: string, data: { content?: string }) {
         await this.ownedMessage(messageId, userId);
-        const updated = await this.messageRepo.updateById(messageId, data);
+        const updated = await this.messageRepo.updateById(messageId, {
+            content: data.content === undefined ? undefined : normalizeMessageContent(data.content),
+        });
         if (!updated) throw apiError(404, "Message not found");
-        return updated;
+        return { ...updated, content: normalizeMessageContent(updated.content) };
     }
     async deleteMessage(messageId: string, userId: string) { await this.ownedMessage(messageId, userId); await this.messageRepo.deleteById(messageId); return { deleted: true }; }
     async streamMessage(data: { chatId: string; content: string; userId: string }, emit: (event: string, payload: unknown) => void, isConnected: () => boolean) {
         if (!data.content?.trim()) throw apiError(400, "Message content is required");
         await this.ownedChat(data.chatId, data.userId);
         const history = await this.messageRepo.findByChatId(data.chatId);
-        const userMessage = await this.messageRepo.create({ chatId: data.chatId, role: "user", content: data.content.trim() });
+        const userMessage = await this.messageRepo.create({ chatId: data.chatId, role: "user", content: normalizeMessageContent(data.content) });
         let fullContent = "";
         const response = await runUltronXAgent([...this.history(history), { role: "user", content: data.content.trim() }], { userId: data.userId, chatId: data.chatId }, {
             onToken: (token) => { if (isConnected()) { fullContent += token; emit("token", token); } },
@@ -52,6 +62,7 @@ export class MessageService {
             onToolResult: (name, result) => { if (isConnected()) emit("tool_result", { name, result }); },
         });
         if (!fullContent) fullContent = response;
+        fullContent = normalizeMessageContent(fullContent);
         const aiMessage = await this.messageRepo.create({ chatId: data.chatId, role: "assistant", content: fullContent });
         if (isConnected()) emit("final", { messageId: aiMessage._id, content: fullContent });
         return { userMessage, aiMessage };

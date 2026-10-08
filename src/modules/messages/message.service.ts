@@ -23,6 +23,11 @@ export class MessageService {
     private history(history: Array<{ role: string; content: string }>): UltronXMessage[] {
         return history.map((message) => ({ role: message.role === "assistant" ? "assistant" : message.role === "system" ? "system" : "user", content: normalizeMessageContent(message.content) }));
     }
+    /**
+     * Sends a message to an owned chat and persists the user and assistant messages.
+     * @param data - Chat, user, and message content identifiers.
+     * @returns The persisted user message and AI response message.
+     */
     async sendMessage(data: { chatId: string; content: string; userId: string }) {
         if (!data.content?.trim()) throw apiError(400, "Message content is required");
         await this.ownedChat(data.chatId, data.userId);
@@ -32,15 +37,34 @@ export class MessageService {
         const aiMessage = await this.messageRepo.create({ chatId: data.chatId, role: "assistant", content: normalizeMessageContent(response) });
         return { userMessage, aiMessage };
     }
+    /**
+     * Retrieves all messages from a chat owned by the user.
+     * @param chatId - Chat identifier.
+     * @param userId - Authenticated user identifier.
+     * @returns The chat's normalized messages in creation order.
+     */
     async getMessages(chatId: string, userId: string) {
         await this.ownedChat(chatId, userId);
         const messages = await this.messageRepo.findByChatId(chatId);
         return messages.map((message) => ({ ...message, content: normalizeMessageContent(message.content) }));
     }
+    /**
+     * Retrieves one message after verifying its chat belongs to the user.
+     * @param messageId - Message identifier.
+     * @param userId - Authenticated user identifier.
+     * @returns The normalized message.
+     */
     async getMessage(messageId: string, userId: string) {
         const message = await this.ownedMessage(messageId, userId);
         return { ...message, content: normalizeMessageContent(message.content) };
     }
+    /**
+     * Updates message content after ownership validation.
+     * @param messageId - Message identifier.
+     * @param userId - Authenticated user identifier.
+     * @param data - Optional replacement content.
+     * @returns The updated normalized message.
+     */
     async updateMessage(messageId: string, userId: string, data: { content?: string }) {
         await this.ownedMessage(messageId, userId);
         const updated = await this.messageRepo.updateById(messageId, {
@@ -49,7 +73,20 @@ export class MessageService {
         if (!updated) throw apiError(404, "Message not found");
         return { ...updated, content: normalizeMessageContent(updated.content) };
     }
+    /**
+     * Deletes a message after ownership validation.
+     * @param messageId - Message identifier.
+     * @param userId - Authenticated user identifier.
+     * @returns A deletion confirmation.
+     */
     async deleteMessage(messageId: string, userId: string) { await this.ownedMessage(messageId, userId); await this.messageRepo.deleteById(messageId); return { deleted: true }; }
+    /**
+     * Streams an AI response and persists the completed exchange.
+     * @param data - Chat, user, and message content identifiers.
+     * @param emit - Sends named SSE events to the connected client.
+     * @param isConnected - Indicates whether the client remains connected.
+     * @returns The persisted user and assistant messages.
+     */
     async streamMessage(data: { chatId: string; content: string; userId: string }, emit: (event: string, payload: unknown) => void, isConnected: () => boolean) {
         if (!data.content?.trim()) throw apiError(400, "Message content is required");
         await this.ownedChat(data.chatId, data.userId);

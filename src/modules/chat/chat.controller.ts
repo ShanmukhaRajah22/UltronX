@@ -10,9 +10,12 @@ export const generateChat = asyncHandler(async (req: Request, res: Response) => 
     }
     return apiSuccess(res, await chatService.generateChat({ userId: req.user.userId, content }), "Chat title generated and saved successfully", 201);
 });
+/** Lists chats owned by the authenticated user. */
 export const listChats = asyncHandler(async (req: Request, res: Response) =>
     apiSuccess(res, await chatService.listChats(req.user.userId), "Chats fetched successfully"));
+/** Updates one chat owned by the authenticated user. */
 export const updateChat = asyncHandler(async (req: Request, res: Response) =>
     apiSuccess(res, await chatService.updateChat(req.params.chatId as string, req.user.userId, req.body), "Chat updated successfully"));
+/** Deletes one chat owned by the authenticated user. */
 export const deleteChat = asyncHandler(async (req: Request, res: Response) =>
     apiSuccess(res, await chatService.deleteChat(req.params.chatId as string, req.user.userId), "Chat deleted successfully"));

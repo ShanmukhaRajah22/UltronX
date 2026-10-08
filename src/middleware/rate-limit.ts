@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
 
 const buckets = new Map<string, { count: number; resetAt: number }>();
+/** Limits requests per IP and route within a rolling in-memory window. */
 export const rateLimit = (windowMs: number, max: number): RequestHandler => (req, res, next) => {
     const now = Date.now();
     const key = `${req.ip}:${req.path}`;

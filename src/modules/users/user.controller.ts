@@ -11,6 +11,12 @@ import {
 import { userService } from "./user.service.js";
 
 export const register = asyncHandler(
+    /**
+     * Validates registration input, creates the account, and sets an access cookie.
+     * @param req - Express request containing name, email, and password.
+     * @param res - Express response used for the account response and cookie.
+     * @returns The created public user.
+     */
     async (req: Request, res: Response) => {
         const data = registerSchema.parse(req.body);
 
@@ -33,6 +39,12 @@ export const register = asyncHandler(
 );
 
 export const login = asyncHandler(
+    /**
+     * Authenticates credentials and sets an access cookie.
+     * @param req - Express request containing email and password.
+     * @param res - Express response used for the token response and cookie.
+     * @returns The authenticated user and JWT.
+     */
     async (req: Request, res: Response) => {
         const data = loginSchema.parse(req.body);
 
@@ -54,6 +66,12 @@ export const login = asyncHandler(
 );
 
 export const getProfile = asyncHandler(
+    /**
+     * Returns the authenticated user's public profile.
+     * @param req - Authenticated Express request.
+     * @param res - Express response.
+     * @returns The current user's profile.
+     */
     async (req: Request, res: Response) => {
         const user =
             await userService.getProfile(

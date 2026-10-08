@@ -9,6 +9,7 @@ export const timeTool: UltronXTool<typeof timeSchema> = {
     name: "time",
     description: "Get the current time in a specific IANA timezone.",
     schema: timeSchema,
+    /** Returns the current time in the requested IANA timezone. */
     async execute({ timezone }) {
         const time = new Date().toLocaleString("en-US", {
             timeZone: timezone,

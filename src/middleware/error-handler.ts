@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { ApiError } from "../Utils/apiResponse.js";
 
+/** Converts known errors into the standard JSON error response. */
 export const errorHandler = (
     err: Error,
     req: Request,

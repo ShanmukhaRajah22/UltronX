@@ -15,6 +15,7 @@ if (!JWT_SECRET) {
 }
 
 class UserService {
+    /** Registers a user after checking email uniqueness and hashing the password. */
     async register(data: CreateUserInput) {
         const existingUser =
             await userRepository.findByEmail(data.email);
@@ -43,6 +44,7 @@ class UserService {
         };
     }
 
+    /** Authenticates a user and returns a signed access token. */
     async login(data: LoginInput) {
         const user =
             await userRepository.findByEmailWithPassword(
@@ -94,6 +96,7 @@ class UserService {
         };
     }
 
+    /** Retrieves the public profile for a user. */
     async getProfile(userId: string) {
         const user =
             await userRepository.findById(userId);

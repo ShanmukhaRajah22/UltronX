@@ -6,6 +6,7 @@ export const readUrl: UltronXTool<typeof readUrlSchema> = {
     name: "webpage_reader",
     description: "Read the text content of a webpage URL.",
     schema: readUrlSchema,
+    /** Fetches a webpage and returns cleaned, bounded text content. */
     async execute({ url }) {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Webpage returned HTTP ${response.status}`);

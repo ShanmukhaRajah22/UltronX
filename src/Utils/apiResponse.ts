@@ -26,6 +26,7 @@ export class ApiResponse<T = unknown> {
         public readonly message = "Success"
     ) { }
 
+    /** Sends the standard success response envelope. */
     send(res: Response): Response {
         return res.status(this.statusCode).json({
             success: true,
@@ -36,6 +37,7 @@ export class ApiResponse<T = unknown> {
     }
 }
 
+/** Creates and sends a standard successful API response. */
 export const apiSuccess = <T>(
     res: Response,
     data: T,
@@ -49,6 +51,7 @@ export const apiSuccess = <T>(
     ).send(res);
 };
 
+/** Creates an API error for centralized error handling. */
 export const apiError = (
     statusCode: number,
     message: string,

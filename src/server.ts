@@ -5,6 +5,7 @@ import { connectToDb } from "./config/database.js";
 
 const PORT = Number(process.env.PORT ?? 4000);
 
+/** Connects to MongoDB, starts the HTTP server, and registers graceful shutdown. */
 const startServer = async (): Promise<void> => {
     try {
         await connectToDb();

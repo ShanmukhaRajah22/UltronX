@@ -31,6 +31,12 @@ const responseSchema = z.object({
     })).min(1),
 });
 
+/**
+ * Sends chat messages to the configured OpenRouter free model.
+ * @param messages - System, user, assistant, and tool messages.
+ * @param options - Optional tools or structured-response configuration.
+ * @returns The first validated model message.
+ */
 export async function openRouterChat(messages: UltronXMessage[], options: ChatOptions = {}) {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured");
@@ -63,6 +69,13 @@ export async function openRouterChat(messages: UltronXMessage[], options: ChatOp
     return parsed.choices[0]!.message;
 }
 
+/**
+ * Requests and validates a structured response from OpenRouter.
+ * @param messages - Prompt messages sent to the model.
+ * @param name - JSON schema name supplied to the provider.
+ * @param schema - Zod schema used to validate the decoded response.
+ * @returns The validated structured value, or null when structured output is unavailable.
+ */
 export async function structuredOpenRouter<T>(
     messages: UltronXMessage[],
     name: string,

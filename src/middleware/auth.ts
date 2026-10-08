@@ -13,6 +13,7 @@ import type {
     throw new Error("JWT_SECRET is not defined");
   }
   
+  /** Authenticates a request using the access cookie or Bearer token. */
   export const authenticate = (
     req: Request,
     _res: Response,

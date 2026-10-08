@@ -3,17 +3,23 @@ import { asyncHandler } from "../../Utils/async-handler.js";
 import { apiSuccess, apiError } from "../../Utils/apiResponse.js";
 import { messageService } from "./message.service.js";
 
+/** Lists messages for an authenticated user's chat. */
 export const getMessages = asyncHandler(async (req: Request, res: Response) =>
     apiSuccess(res, await messageService.getMessages(req.params.chatId as string, req.user.userId), "Messages fetched successfully"));
+/** Retrieves one message after ownership validation. */
 export const getMessage = asyncHandler(async (req: Request, res: Response) =>
     apiSuccess(res, await messageService.getMessage(req.params.messageId as string, req.user.userId), "Message fetched successfully"));
+/** Updates one owned message's content. */
 export const updateMessage = asyncHandler(async (req: Request, res: Response) =>
     apiSuccess(res, await messageService.updateMessage(req.params.messageId as string, req.user.userId, { content: req.body.content }), "Message updated successfully"));
+/** Deletes one owned message. */
 export const deleteMessage = asyncHandler(async (req: Request, res: Response) =>
     apiSuccess(res, await messageService.deleteMessage(req.params.messageId as string, req.user.userId), "Message deleted successfully"));
+/** Sends a message and returns the persisted AI response. */
 export const sendMessage = asyncHandler(async (req: Request, res: Response) =>
     apiSuccess(res, await messageService.sendMessage({ chatId: req.body.chatId, content: req.body.content, userId: req.user.userId }), "Message sent successfully", 201));
 
+/** Streams an AI response as server-sent events. */
 export const streamMessage = asyncHandler(async (req: Request, res: Response) => {
     const { chatId, content } = req.body;
     if (!chatId || !content) throw apiError(400, "Chat ID and content are required");

@@ -26,6 +26,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 
 
+/** Returns the liveness status of the API process. */
 app.get("/health", (_req, res) => {
     res.status(200).json({
         success: true,

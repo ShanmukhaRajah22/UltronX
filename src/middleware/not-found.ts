@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { apiError } from "../Utils/apiResponse.js";
 
+/** Returns a standard 404 response for unmatched routes. */
 export const notFoundHandler = (
     req: Request,
     _res: Response,

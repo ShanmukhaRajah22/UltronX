@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 
 export class chatRepositary {
     private chatModel = ChatModel
+    /** Persists a new chat for a user. */
     createChat = async (input: CreateChatInput) => {
         const chat = await this.chatModel.create({
             userId: input.userId,
@@ -12,6 +13,7 @@ export class chatRepositary {
         return chat
     }
 
+    /** Retrieves chats owned by a user, newest first. */
     getUserChats = async (userId: string, options?: {
         cursor?: string;
         limit?: number;
@@ -20,6 +22,7 @@ export class chatRepositary {
         return chats
     }
 
+    /** Updates one chat only when its owner matches the user ID. */
     updateChat = async (
         chatId: string,
         userId: string,
@@ -29,10 +32,12 @@ export class chatRepositary {
         return chat
     }
 
+    /** Deletes one chat only when its owner matches the user ID. */
     deleteChat = async (chatId: string, userId: string) => {
         return await this.chatModel.findOneAndDelete({ _id: chatId, userId });
     }
 
+    /** Finds a chat scoped to both its chat ID and owning user ID. */
     findByUserAndChatId = async (data: {
         chatId: Types.ObjectId,
         userId: Types.ObjectId,

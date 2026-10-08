@@ -10,6 +10,7 @@ interface CreateMessageData {
 }
 
 export class MessageRepository {
+    /** Persists a message in a chat. */
     async create(data: CreateMessageData): Promise<IMessage> {
         return Message.create({
             chatId: data.chatId,
@@ -20,12 +21,14 @@ export class MessageRepository {
         });
     }
 
+    /** Finds one message by its identifier. */
     async findById(
         messageId: string | Types.ObjectId
     ): Promise<IMessage | null> {
         return Message.findById(messageId);
     }
 
+    /** Retrieves all messages for a chat in creation order. */
     async findByChatId(
         chatId: string | Types.ObjectId
     ): Promise<IMessage[]> {
@@ -36,6 +39,7 @@ export class MessageRepository {
             .lean();
     }
 
+    /** Retrieves a bounded recent message history in creation order. */
     async findRecentByChatId(
         chatId: string | Types.ObjectId,
         limit: number
@@ -50,6 +54,7 @@ export class MessageRepository {
         return messages.reverse();
     }
 
+    /** Counts messages belonging to a chat. */
     async countByChatId(
         chatId: string | Types.ObjectId
     ): Promise<number> {
@@ -58,6 +63,7 @@ export class MessageRepository {
         });
     }
 
+    /** Deletes every message belonging to a chat. */
     async deleteByChatId(
         chatId: string | Types.ObjectId
     ): Promise<void> {
@@ -66,12 +72,14 @@ export class MessageRepository {
         });
     }
 
+    /** Deletes one message by its identifier. */
     async deleteById(
         messageId: string | Types.ObjectId
     ): Promise<void> {
         await Message.findByIdAndDelete(messageId);
     }
 
+    /** Updates the supplied fields on one message. */
     async updateById(
         messageId: string | Types.ObjectId,
         data: { content?: string }

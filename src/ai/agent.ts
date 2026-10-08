@@ -6,6 +6,7 @@ import { searchTool } from "../tools/search.tool.js";
 import { timeTool } from "../tools/time.tool.js";
 import type { UltronXTool } from "../tools/types.js";
 import { normalizeMessageContent } from "../Utils/message-content.js";
+import { getRelevantMemories } from "../tools/memory.tool.js";
 
 const tools: UltronXTool[] = [timeTool, searchTool, readUrl, saveMemoryTool];
 const toolDefinitions = tools.map((tool) => ({
@@ -15,8 +16,24 @@ const toolDefinitions = tools.map((tool) => ({
 const systemPrompt = "You are UltronX, a concise helpful AI companion. Use tools only when useful. Save only stable, useful user memories.";
 
 export type AgentCallbacks = { onToken?: (token: string) => void; onToolStart?: (name: string, input: unknown) => void; onToolResult?: (name: string, result: unknown) => void };
+
+/**
+ * Runs the UltronX agent with conversation history, user memory, and tools.
+ * @param history - Previous messages for the current chat.
+ * @param context - Authenticated user and current chat identifiers.
+ * @param callbacks - Optional callbacks for streaming agent events.
+ * @returns The assistant's final response text.
+ */
 export async function runUltronXAgent(history: UltronXMessage[], context: { userId: string; chatId: string }, callbacks: AgentCallbacks = {}) {
-    const messages: UltronXMessage[] = [{ role: "system", content: systemPrompt }, ...history];
+    const memories = await getRelevantMemories(context.userId);
+    const memoryContext = memories.length
+        ? memories.map((memory) => `- [${memory.type}] ${memory.content}`).join("\n")
+        : "No stored memories for this user.";
+    const messages: UltronXMessage[] = [
+        { role: "system", content: systemPrompt },
+        { role: "system", content: `User Memory:\n${memoryContext}` },
+        ...history,
+    ];
     for (let iteration = 0; iteration < 5; iteration += 1) {
         const response = await openRouterChat(messages, { tools: toolDefinitions });
         const content = normalizeMessageContent(response.content || "");

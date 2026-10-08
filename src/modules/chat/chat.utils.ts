@@ -1,6 +1,7 @@
 import { structuredOpenRouter, type UltronXMessage } from "../../ai/model.js";
 import { z } from "zod";
 
+/** Generates a concise chat title from the first user message. */
 export const createTitle = async (firstMessage: string) => {
     const schema = z.object({ title: z.string().min(1).max(100) });
     const messages: UltronXMessage[] = [

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { RequestHandler } from "express";
 
+/** Adds or propagates a request ID for tracing responses and errors. */
 export const requestId: RequestHandler = (req, res, next) => {
     const id = req.header("x-request-id") || randomUUID();
     req.requestId = id;

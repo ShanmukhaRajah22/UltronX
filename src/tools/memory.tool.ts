@@ -1,78 +1,27 @@
-import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { MemoryModel } from "../modules/memory/memory.model.js";
+import type { MiraTool } from "./types.js";
 
-export const saveMemoryTool = tool(
-    async ({
-        type,
-        content,
-        importance,
-        confidence,
-    }) => {
+const memorySchema = z.object({
+    type: z.enum(["fact", "preference", "goal", "project", "instruction", "language", "interaction_style"]),
+    content: z.string().min(1).max(1000),
+    importance: z.number().min(0).max(1),
+    confidence: z.number().min(0).max(1),
+});
 
-        console.log("MEMORY REQUEST:", {
+export const saveMemoryTool: MiraTool<typeof memorySchema> = {
+    name: "memory",
+    description: "Save a stable, useful long-term fact, preference, goal, project, instruction, language, or interaction style about the user.",
+    schema: memorySchema,
+    async execute({ type, content, importance, confidence }, context) {
+        const memory = await MemoryModel.create({
+            userId: context.userId,
+            chatId: context.chatId,
             type,
             content,
             importance,
             confidence,
         });
-
-
-        //TODO: need to add this to db 
-        await MemoryModel.create({
-            type: type || "fact",
-            content,
-            importance,
-            confidence,
-            chatId: ""
-        })
-        return JSON.stringify({
-            type,
-            content,
-            importance,
-            confidence,
-        });
+        return { id: memory._id.toString(), type, content, importance, confidence };
     },
-    {
-        name: "save_memory",
-
-        description: `
-Save a useful long-term memory about the user.
-
-Use this ONLY when the information is genuinely useful
-in future conversations.
-
-Do not save casual conversation, temporary emotions,
-one-time questions, speculation, or information that
-is unlikely to remain useful.
-
-Memory should represent stable facts, preferences,
-goals, projects, instructions, language preferences,
-or interaction style.
-`,
-
-        schema: z.object({
-            type: z.enum([
-                "fact",
-                "preference",
-                "goal",
-                "project",
-                "instruction",
-                "language",
-                "interaction_style",
-            ]),
-
-            content: z.string(),
-
-            importance: z
-                .number()
-                .min(0)
-                .max(1),
-
-            confidence: z
-                .number()
-                .min(0)
-                .max(1),
-        }),
-    }
-);
+};

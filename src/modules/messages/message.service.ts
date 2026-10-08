@@ -1,225 +1,60 @@
 import { Types } from "mongoose";
+import { apiError } from "../../Utils/apiResponse.js";
+import { runMiraAgent } from "../../ai/agent.js";
+import type { MiraMessage } from "../../ai/model.js";
 import { MessageRepository } from "./message.repo.js";
 import { chatRepositary } from "../chat/chat.repo.js";
-import { Message } from "./message.types.js";
-import { apiError } from "../../Utils/apiResponse.js";
-import miraAi from "../../ai/agent.js";
-import { aiResponse } from "./message.utils.js";
-import {
-    HumanMessage,
-    SystemMessage,
-    AIMessage,
-} from "@langchain/core/messages";
-import miraModel from "../../ai/model.js";
-import { MIRA_SYSTEM_PROMPT } from "../../ai/prompts.js";
 
-export class messageService {
-    private messageRepo = new MessageRepository()
-    private chatRepo = new chatRepositary()
-
-    sendMessage = async (data: Message) => {
-        const { content, userId, chatId } = data;
-
-        if (!userId) {
-            throw apiError(401, "Unauthorized");
-        }
-
-        if (!chatId) {
-            throw apiError(400, "Chat ID is required");
-        }
-
-        if (!content?.trim()) {
-            throw apiError(400, "Message content is required");
-        }
-
-        try {
-            // 1. Get previous messages
-            const history =
-                await this.messageRepo.findByChatId(chatId);
-
-            // 2. Build LLM context
-            const messages: (
-                | HumanMessage
-                | AIMessage
-                | SystemMessage
-            )[] = [];
-
-            // System prompt should always be present.
-            messages.push(
-                new SystemMessage(MIRA_SYSTEM_PROMPT)
-            );
-
-            // 3. Convert DB messages → LangChain messages
-            for (const message of history) {
-                switch (message.role) {
-                    case "user":
-                        messages.push(
-                            new HumanMessage(message.content)
-                        );
-                        break;
-
-                    case "assistant":
-                        messages.push(
-                            new AIMessage(message.content)
-                        );
-                        break;
-
-                    case "system":
-                        messages.push(
-                            new SystemMessage(message.content)
-                        );
-                        break;
-                }
-            }
-
-            // 4. Add current user message
-            messages.push(
-                new HumanMessage(content)
-            );
-
-            // 5. Ask Mira
-            const response = await aiResponse(messages);
-            const responseContent =
-                typeof response.content === "string"
-                    ? response.content
-                    : JSON.stringify(response.content);
-
-            if (!responseContent) {
-                throw apiError(
-                    500,
-                    "Empty AI response"
-                );
-            }
-
-            // 6. Persist user message
-            const userMessage =
-                await this.messageRepo.create({
-                    chatId,
-                    role: "user",
-                    content,
-                });
-
-            // 7. Persist AI message
-            const aiMessage =
-                await this.messageRepo.create({
-                    chatId,
-                    role: "assistant",
-                    content: responseContent,
-                });
-
-            return {
-                userMessage,
-                aiMessage,
-            };
-        } catch (error) {
-            console.error(
-                "sendMessage error:",
-                error
-            );
-
-            if (error instanceof Error) {
-                throw apiError(
-                    500,
-                    error.message
-                );
-            }
-
-            throw apiError(
-                500,
-                "Error generating response"
-            );
-        }
-    };
-
-    async getMessages(chatId: string) {
-        if (!chatId) throw apiError(400, "Chat ID is required");
-        return await this.messageRepo.findByChatId(chatId);
+export class MessageService {
+    private messageRepo = new MessageRepository();
+    private chatRepo = new chatRepositary();
+    private async ownedChat(chatId: string, userId: string) {
+        if (!Types.ObjectId.isValid(chatId)) throw apiError(400, "Invalid chat ID");
+        const chat = await this.chatRepo.findByUserAndChatId({ chatId: new Types.ObjectId(chatId), userId: new Types.ObjectId(userId) });
+        if (!chat) throw apiError(404, "Chat not found");
     }
-
-    async getMessage(messageId: string) {
-        if (!messageId) throw apiError(400, "Message ID is required");
+    private async ownedMessage(messageId: string, userId: string) {
         const message = await this.messageRepo.findById(messageId);
         if (!message) throw apiError(404, "Message not found");
+        await this.ownedChat(message.chatId.toString(), userId);
         return message;
     }
-
-    async updateMessage(messageId: string, data: { content?: string }) {
-        if (!messageId) throw apiError(400, "Message ID is required");
+    private history(history: Array<{ role: string; content: string }>): MiraMessage[] {
+        return history.map((message) => ({ role: message.role === "assistant" ? "assistant" : message.role === "system" ? "system" : "user", content: message.content }));
+    }
+    async sendMessage(data: { chatId: string; content: string; userId: string }) {
+        if (!data.content?.trim()) throw apiError(400, "Message content is required");
+        await this.ownedChat(data.chatId, data.userId);
+        const history = await this.messageRepo.findByChatId(data.chatId);
+        const userMessage = await this.messageRepo.create({ chatId: data.chatId, role: "user", content: data.content.trim() });
+        const response = await runMiraAgent([...this.history(history), { role: "user", content: data.content.trim() }], { userId: data.userId, chatId: data.chatId });
+        const aiMessage = await this.messageRepo.create({ chatId: data.chatId, role: "assistant", content: response });
+        return { userMessage, aiMessage };
+    }
+    async getMessages(chatId: string, userId: string) { await this.ownedChat(chatId, userId); return this.messageRepo.findByChatId(chatId); }
+    async getMessage(messageId: string, userId: string) { return this.ownedMessage(messageId, userId); }
+    async updateMessage(messageId: string, userId: string, data: { content?: string }) {
+        await this.ownedMessage(messageId, userId);
         const updated = await this.messageRepo.updateById(messageId, data);
         if (!updated) throw apiError(404, "Message not found");
         return updated;
     }
-
-    async deleteMessage(messageId: string) {
-        if (!messageId) throw apiError(400, "Message ID is required");
-        const message = await this.messageRepo.findById(messageId);
-        if (!message) throw apiError(404, "Message not found");
-        await this.messageRepo.deleteById(messageId);
-        return { success: true, message: "Message deleted successfully" };
-    }
-
-    async streamMessage(
-        data: Message,
-        onChunk: (chunk: string) => void
-    ) {
-        const { content, userId, chatId } = { ...data };
-        if (!userId) throw apiError(401, "Unauthorized");
-        if (!chatId) throw apiError(400, "Chat Not found");
-
-        const history = await this.messageRepo.findByChatId(chatId);
-
-        const messages: any[] = [];
-        const hasSystem = history.some(m => m.role === "system");
-        if (!hasSystem) {
-            messages.push(new SystemMessage(MIRA_SYSTEM_PROMPT));
-        }
-
-        for (const message of history) {
-            switch (message.role) {
-                case "user":
-                    messages.push(new HumanMessage(message.content));
-                    break;
-                case "assistant":
-                    messages.push(new AIMessage(message.content));
-                    break;
-                case "system":
-                    messages.push(new SystemMessage(message.content));
-                    break;
-            }
-        }
-        messages.push(new HumanMessage(content));
-
-        const userMessage = await this.messageRepo.create({
-            chatId: chatId,
-            role: "user",
-            content: content,
-        });
-
+    async deleteMessage(messageId: string, userId: string) { await this.ownedMessage(messageId, userId); await this.messageRepo.deleteById(messageId); return { deleted: true }; }
+    async streamMessage(data: { chatId: string; content: string; userId: string }, emit: (event: string, payload: unknown) => void, isConnected: () => boolean) {
+        if (!data.content?.trim()) throw apiError(400, "Message content is required");
+        await this.ownedChat(data.chatId, data.userId);
+        const history = await this.messageRepo.findByChatId(data.chatId);
+        const userMessage = await this.messageRepo.create({ chatId: data.chatId, role: "user", content: data.content.trim() });
         let fullContent = "";
-        try {
-            const stream = await miraModel.stream(messages);
-            for await (const chunk of stream) {
-                const text = typeof chunk.content === "string" ? chunk.content : JSON.stringify(chunk.content);
-                if (text) {
-                    fullContent += text;
-                    onChunk(text);
-                }
-            }
-        } catch (err) {
-            console.error("Streaming error:", err);
-            throw apiError(400, "Error streaming AI response");
-        }
-
-        if (!fullContent) {
-            fullContent = "No response generated";
-        }
-
-        const aiMessage = await this.messageRepo.create({
-            chatId: chatId,
-            role: "assistant",
-            content: fullContent,
+        const response = await runMiraAgent([...this.history(history), { role: "user", content: data.content.trim() }], { userId: data.userId, chatId: data.chatId }, {
+            onToken: (token) => { if (isConnected()) { fullContent += token; emit("token", token); } },
+            onToolStart: (name, input) => { if (isConnected()) emit("tool_start", { name, input }); },
+            onToolResult: (name, result) => { if (isConnected()) emit("tool_result", { name, result }); },
         });
-
+        if (!fullContent) fullContent = response;
+        const aiMessage = await this.messageRepo.create({ chatId: data.chatId, role: "assistant", content: fullContent });
+        if (isConnected()) emit("final", { messageId: aiMessage._id, content: fullContent });
         return { userMessage, aiMessage };
     }
 }
+export const messageService = new MessageService();

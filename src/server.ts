@@ -9,9 +9,15 @@ const startServer = async (): Promise<void> => {
     try {
         await connectToDb();
 
-        app.listen(PORT, () => {
+        const server = app.listen(PORT, () => {
             console.log(`Mira API running on http://localhost:${PORT}`);
         });
+        const shutdown = async () => {
+            server.close();
+            await import("mongoose").then(({ default: mongoose }) => mongoose.connection.close());
+        };
+        process.once("SIGTERM", shutdown);
+        process.once("SIGINT", shutdown);
     } catch (error) {
         console.error("Failed to start Mira:", error);
         process.exit(1);

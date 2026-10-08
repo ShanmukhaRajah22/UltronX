@@ -8,15 +8,21 @@ import { notFoundHandler } from "./middleware/not-found.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
 import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
+import { openApiDocument } from "./docs.js";
+import { requestId } from "./middleware/request-id.js";
+import { rateLimit } from "./middleware/rate-limit.js";
 
 const app = express();
-app.use(express.json())
+app.use(requestId);
+app.use(express.json({ limit: "1mb" }));
 app.use(helmet());
 
 app.use(cookieParser());
 
-app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(rateLimit(Number(process.env.RATE_LIMIT_WINDOW_MS || 900000), Number(process.env.RATE_LIMIT_MAX || 100)));
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 
 

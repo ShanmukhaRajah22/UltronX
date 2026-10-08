@@ -8,6 +8,12 @@ const memorySchema = new Schema(
             required: true,
             index: true,
         },
+        chatId: {
+            type: Schema.Types.ObjectId,
+            ref: "Chat",
+            required: true,
+            index: true,
+        },
 
         content: {
             type: String,
@@ -17,7 +23,7 @@ const memorySchema = new Schema(
 
         type: {
             type: String,
-            enum: ["fact", "preference", "event", "relationship"],
+            enum: ["fact", "preference", "goal", "project", "instruction", "language", "interaction_style"],
             default: "fact",
             index: true,
         },
@@ -27,6 +33,12 @@ const memorySchema = new Schema(
             min: 0,
             max: 1,
             default: 0.5,
+        },
+        confidence: {
+            type: Number,
+            min: 0,
+            max: 1,
+            default: 0.8,
         },
     },
     {

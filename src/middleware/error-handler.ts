@@ -3,7 +3,7 @@ import { ApiError } from "../Utils/apiResponse.js";
 
 export const errorHandler = (
     err: Error,
-    _req: Request,
+    req: Request,
     res: Response,
     _next: NextFunction
 ): void => {
@@ -25,11 +25,13 @@ export const errorHandler = (
         message = err.message;
     }
 
+    console.error(`[${req.requestId}] ${statusCode} ${req.method} ${req.originalUrl}: ${message}`, err);
     res.status(statusCode).json({
         success: false,
         statusCode,
         message,
         ...(errors ? { errors } : {}),
         ...(process.env.NODE_ENV !== "production" ? { stack: err.stack } : {}),
+        requestId: req.requestId,
     });
 };

@@ -1,12 +1,17 @@
-import * as z from "zod"
-import { tool } from "langchain"
 import { tavily } from "@tavily/core"
-import { TavilySearch } from "@langchain/tavily";
+import { z } from "zod";
+import type { MiraTool } from "./types.js";
 
-
-const searchInternet = new TavilySearch({
-    tavilyApiKey: process.env.TAVILY_API_KEY,
-    maxResults: 4,
-    topic: "general"
-})
-export default searchInternet
+const searchSchema = z.object({ query: z.string().min(2) });
+export const searchTool: MiraTool<typeof searchSchema> = {
+    name: "search",
+    description: "Search the web for current information.",
+    schema: searchSchema,
+    async execute({ query }) {
+        const apiKey = process.env.TAVILY_API_KEY;
+        if (!apiKey) throw new Error("TAVILY_API_KEY is not configured");
+        const result = await tavily({ apiKey }).search(query, { maxResults: 4 });
+        return result.results.map((item) => ({ title: item.title, url: item.url, content: item.content }));
+    },
+};
+export default searchTool;

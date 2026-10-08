@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-import { userRepository } from "./user.repositary.js";
+import { userRepository } from "./user.repository.js";
 import type {
     CreateUserInput,
     LoginInput,
@@ -79,7 +79,7 @@ class UserService {
             },
             JWT_SECRET as string,
             {
-                expiresIn: "7d",
+                expiresIn: (process.env.JWT_EXPIRES_IN || "7d") as jwt.SignOptions["expiresIn"],
             }
         );
 

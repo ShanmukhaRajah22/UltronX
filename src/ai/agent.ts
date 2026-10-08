@@ -1,13 +1,36 @@
-import { createAgent, tool } from "langchain";
-import { timeTool } from "../tools/time.tool.js";
-import miraModel from "./model.js";
-import searchInternet from "../tools/search.tool.js";
+import { z } from "zod";
+import { openRouterChat, type MiraMessage } from "./model.js";
 import { readUrl } from "../tools/WebPageReader.tool.js";
 import { saveMemoryTool } from "../tools/memory.tool.js";
+import { searchTool } from "../tools/search.tool.js";
+import { timeTool } from "../tools/time.tool.js";
+import type { MiraTool } from "../tools/types.js";
 
-const miraAi = createAgent({
-    model: miraModel,
-    tools: [timeTool, searchInternet, readUrl, saveMemoryTool]
-})
+const tools: MiraTool[] = [timeTool, searchTool, readUrl, saveMemoryTool];
+const toolDefinitions = tools.map((tool) => ({
+    type: "function",
+    function: { name: tool.name, description: tool.description, parameters: z.toJSONSchema(tool.schema) },
+}));
+const systemPrompt = "You are Mira, a concise helpful AI companion. Use tools only when useful. Save only stable, useful user memories.";
 
-export default miraAi
+export type AgentCallbacks = { onToken?: (token: string) => void; onToolStart?: (name: string, input: unknown) => void; onToolResult?: (name: string, result: unknown) => void };
+export async function runMiraAgent(history: MiraMessage[], context: { userId: string; chatId: string }, callbacks: AgentCallbacks = {}) {
+    const messages: MiraMessage[] = [{ role: "system", content: systemPrompt }, ...history];
+    for (let iteration = 0; iteration < 5; iteration += 1) {
+        const response = await openRouterChat(messages, { tools: toolDefinitions });
+        const content = response.content || "";
+        if (content) callbacks.onToken?.(content);
+        if (!response.tool_calls?.length) return content;
+        messages.push({ role: "assistant", content, tool_calls: response.tool_calls });
+        for (const call of response.tool_calls) {
+            const tool = tools.find((candidate) => candidate.name === call.function.name);
+            if (!tool) throw new Error(`Unknown tool requested: ${call.function.name}`);
+            const input = tool.schema.parse(JSON.parse(call.function.arguments));
+            callbacks.onToolStart?.(tool.name, input);
+            const result = await tool.execute(input, context);
+            callbacks.onToolResult?.(tool.name, result);
+            messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+        }
+    }
+    throw new Error("AI tool iteration limit exceeded");
+}

@@ -4,5 +4,5 @@ export interface MiraTool<TInput extends z.ZodTypeAny = z.ZodTypeAny> {
     name: string;
     description: string;
     schema: TInput;
-    execute(input: z.infer<TInput>): Promise<unknown>;
+    execute(input: z.infer<TInput>, context: { userId: string; chatId: string }): Promise<unknown>;
 }

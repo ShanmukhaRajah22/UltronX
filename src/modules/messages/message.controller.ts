@@ -3,88 +3,35 @@ import { asyncHandler } from "../../Utils/async-handler.js";
 import { apiSuccess, apiError } from "../../Utils/apiResponse.js";
 import { messageService } from "./message.service.js";
 
-const service = new messageService();
+export const getMessages = asyncHandler(async (req: Request, res: Response) =>
+    apiSuccess(res, await messageService.getMessages(req.params.chatId as string, req.user.userId), "Messages fetched successfully"));
+export const getMessage = asyncHandler(async (req: Request, res: Response) =>
+    apiSuccess(res, await messageService.getMessage(req.params.messageId as string, req.user.userId), "Message fetched successfully"));
+export const updateMessage = asyncHandler(async (req: Request, res: Response) =>
+    apiSuccess(res, await messageService.updateMessage(req.params.messageId as string, req.user.userId, { content: req.body.content }), "Message updated successfully"));
+export const deleteMessage = asyncHandler(async (req: Request, res: Response) =>
+    apiSuccess(res, await messageService.deleteMessage(req.params.messageId as string, req.user.userId), "Message deleted successfully"));
+export const sendMessage = asyncHandler(async (req: Request, res: Response) =>
+    apiSuccess(res, await messageService.sendMessage({ chatId: req.body.chatId, content: req.body.content, userId: req.user.userId }), "Message sent successfully", 201));
 
-export const getMessages = asyncHandler(
-    async (req: Request, res: Response) => {
-        const chatId = req.params.chatId as string;
-        const messages = await service.getMessages(chatId);
-        return apiSuccess(res, messages, "Messages fetched successfully");
+export const streamMessage = asyncHandler(async (req: Request, res: Response) => {
+    const { chatId, content } = req.body;
+    if (!chatId || !content) throw apiError(400, "Chat ID and content are required");
+    let connected = true;
+    req.on("close", () => { connected = false; });
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+    const emit = (event: string, payload: unknown) => {
+        if (connected && !res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+    };
+    try {
+        await messageService.streamMessage({ chatId, content, userId: req.user.userId }, emit, () => connected);
+        emit("done", { ok: true });
+    } catch (error) {
+        if (connected) emit("error", { message: error instanceof Error ? error.message : "Streaming failed", requestId: req.requestId });
+    } finally {
+        if (!res.writableEnded) res.end();
     }
-);
-
-export const getMessage = asyncHandler(
-    async (req: Request, res: Response) => {
-        const messageId = req.params.messageId as string;
-        const message = await service.getMessage(messageId);
-        return apiSuccess(res, message, "Message fetched successfully");
-    }
-);
-
-export const updateMessage = asyncHandler(
-    async (req: Request, res: Response) => {
-        const messageId = req.params.messageId as string;
-        const { content } = req.body;
-        const updated = await service.updateMessage(messageId, { content });
-        return apiSuccess(res, updated, "Message updated successfully");
-    }
-);
-
-export const deleteMessage = asyncHandler(
-    async (req: Request, res: Response) => {
-        const messageId = req.params.messageId as string;
-        const result = await service.deleteMessage(messageId);
-        return apiSuccess(res, result, "Message deleted successfully");
-    }
-);
-
-export const sendMessage = asyncHandler(
-    async (req: Request, res: Response) => {
-        const { content, chatId } = req.body;
-        const userId = req.user?.userId;
-        const result = await service.sendMessage({
-            chatId,
-            content,
-            userId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        });
-        return apiSuccess(res, result, "Message sent successfully", 201);
-    }
-);
-
-export const streamMessage = asyncHandler(
-    async (req: Request, res: Response) => {
-        const { content, chatId } = req.body;
-        const userId = req.user?.userId;
-
-        if (!chatId || !content) {
-            throw apiError(400, "Chat ID and content are required");
-        }
-
-        res.setHeader("Content-Type", "text/event-stream");
-        res.setHeader("Cache-Control", "no-cache");
-        res.setHeader("Connection", "keep-alive");
-        res.flushHeaders?.();
-
-        try {
-            await service.streamMessage(
-                {
-                    chatId,
-                    content,
-                    userId,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                },
-                (chunk) => {
-                    res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
-                }
-            );
-            res.write(`data: [DONE]\n\n`);
-            res.end();
-        } catch (err: any) {
-            res.write(`data: ${JSON.stringify({ error: err.message || "Streaming failed" })}\n\n`);
-            res.end();
-        }
-    }
-);
+});

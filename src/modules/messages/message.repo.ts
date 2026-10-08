@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { Message, IMessage, MessageRole } from "./message.model.js";
+import { Message, type IMessage, type MessageRole } from "./message.model.js";
 
 interface CreateMessageData {
     chatId: Types.ObjectId | string;

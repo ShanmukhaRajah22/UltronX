@@ -1,6 +1,6 @@
-# Mira
+# UltronX
 
-Mira is a backend-only AI companion API built with TypeScript, Express, MongoDB, and OpenRouter's free model router.
+UltronX is a backend-only AI companion API built with TypeScript, Express, MongoDB, and OpenRouter's free model router.
 
 ## Features
 

@@ -1,21 +1,21 @@
 import { z } from "zod";
-import { openRouterChat, type MiraMessage } from "./model.js";
+import { openRouterChat, type UltronXMessage } from "./model.js";
 import { readUrl } from "../tools/WebPageReader.tool.js";
 import { saveMemoryTool } from "../tools/memory.tool.js";
 import { searchTool } from "../tools/search.tool.js";
 import { timeTool } from "../tools/time.tool.js";
-import type { MiraTool } from "../tools/types.js";
+import type { UltronXTool } from "../tools/types.js";
 
-const tools: MiraTool[] = [timeTool, searchTool, readUrl, saveMemoryTool];
+const tools: UltronXTool[] = [timeTool, searchTool, readUrl, saveMemoryTool];
 const toolDefinitions = tools.map((tool) => ({
     type: "function",
     function: { name: tool.name, description: tool.description, parameters: z.toJSONSchema(tool.schema) },
 }));
-const systemPrompt = "You are Mira, a concise helpful AI companion. Use tools only when useful. Save only stable, useful user memories.";
+const systemPrompt = "You are UltronX, a concise helpful AI companion. Use tools only when useful. Save only stable, useful user memories.";
 
 export type AgentCallbacks = { onToken?: (token: string) => void; onToolStart?: (name: string, input: unknown) => void; onToolResult?: (name: string, result: unknown) => void };
-export async function runMiraAgent(history: MiraMessage[], context: { userId: string; chatId: string }, callbacks: AgentCallbacks = {}) {
-    const messages: MiraMessage[] = [{ role: "system", content: systemPrompt }, ...history];
+export async function runUltronXAgent(history: UltronXMessage[], context: { userId: string; chatId: string }, callbacks: AgentCallbacks = {}) {
+    const messages: UltronXMessage[] = [{ role: "system", content: systemPrompt }, ...history];
     for (let iteration = 0; iteration < 5; iteration += 1) {
         const response = await openRouterChat(messages, { tools: toolDefinitions });
         const content = response.content || "";

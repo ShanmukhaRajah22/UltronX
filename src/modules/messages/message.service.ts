@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { apiError } from "../../Utils/apiResponse.js";
-import { runMiraAgent } from "../../ai/agent.js";
-import type { MiraMessage } from "../../ai/model.js";
+import { runUltronXAgent } from "../../ai/agent.js";
+import type { UltronXMessage } from "../../ai/model.js";
 import { MessageRepository } from "./message.repo.js";
 import { chatRepositary } from "../chat/chat.repo.js";
 
@@ -19,7 +19,7 @@ export class MessageService {
         await this.ownedChat(message.chatId.toString(), userId);
         return message;
     }
-    private history(history: Array<{ role: string; content: string }>): MiraMessage[] {
+    private history(history: Array<{ role: string; content: string }>): UltronXMessage[] {
         return history.map((message) => ({ role: message.role === "assistant" ? "assistant" : message.role === "system" ? "system" : "user", content: message.content }));
     }
     async sendMessage(data: { chatId: string; content: string; userId: string }) {
@@ -27,7 +27,7 @@ export class MessageService {
         await this.ownedChat(data.chatId, data.userId);
         const history = await this.messageRepo.findByChatId(data.chatId);
         const userMessage = await this.messageRepo.create({ chatId: data.chatId, role: "user", content: data.content.trim() });
-        const response = await runMiraAgent([...this.history(history), { role: "user", content: data.content.trim() }], { userId: data.userId, chatId: data.chatId });
+        const response = await runUltronXAgent([...this.history(history), { role: "user", content: data.content.trim() }], { userId: data.userId, chatId: data.chatId });
         const aiMessage = await this.messageRepo.create({ chatId: data.chatId, role: "assistant", content: response });
         return { userMessage, aiMessage };
     }
@@ -46,7 +46,7 @@ export class MessageService {
         const history = await this.messageRepo.findByChatId(data.chatId);
         const userMessage = await this.messageRepo.create({ chatId: data.chatId, role: "user", content: data.content.trim() });
         let fullContent = "";
-        const response = await runMiraAgent([...this.history(history), { role: "user", content: data.content.trim() }], { userId: data.userId, chatId: data.chatId }, {
+        const response = await runUltronXAgent([...this.history(history), { role: "user", content: data.content.trim() }], { userId: data.userId, chatId: data.chatId }, {
             onToken: (token) => { if (isConnected()) { fullContent += token; emit("token", token); } },
             onToolStart: (name, input) => { if (isConnected()) emit("tool_start", { name, input }); },
             onToolResult: (name, result) => { if (isConnected()) emit("tool_result", { name, result }); },

@@ -29,7 +29,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 app.get("/health", (_req, res) => {
     res.status(200).json({
         success: true,
-        message: "Mira API is healthy",
+        message: "UltronX API is healthy",
     });
 });
 

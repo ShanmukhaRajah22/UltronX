@@ -1,9 +1,9 @@
 import { tavily } from "@tavily/core"
 import { z } from "zod";
-import type { MiraTool } from "./types.js";
+import type { UltronXTool } from "./types.js";
 
 const searchSchema = z.object({ query: z.string().min(2) });
-export const searchTool: MiraTool<typeof searchSchema> = {
+export const searchTool: UltronXTool<typeof searchSchema> = {
     name: "search",
     description: "Search the web for current information.",
     schema: searchSchema,

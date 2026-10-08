@@ -1,6 +1,6 @@
 export const openApiDocument = {
     openapi: "3.0.3",
-    info: { title: "Mira API", version: "1.0.0", description: "Mira AI companion backend" },
+    info: { title: "UltronX API", version: "1.0.0", description: "UltronX AI companion backend" },
     servers: [{ url: "/api/v1" }],
     components: {
         securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" } },

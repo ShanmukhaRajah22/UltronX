@@ -28,10 +28,10 @@ export const memorySchema = z.object({
     confidence: z.number().min(0).max(1),
 });
 
-export const miraResponseSchema = z.object({
+export const ultronxResponseSchema = z.object({
     response: z.string(),
 
     memory: memorySchema.nullable(),
 });
 
-export type MiraResponse = z.infer<typeof miraResponseSchema>;
+export type UltronXResponse = z.infer<typeof ultronxResponseSchema>;

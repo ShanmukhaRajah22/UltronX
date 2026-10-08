@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export type MiraMessage = {
+export type UltronXMessage = {
     role: "system" | "user" | "assistant" | "tool";
     content: string;
     tool_call_id?: string;
@@ -31,12 +31,12 @@ const responseSchema = z.object({
     })).min(1),
 });
 
-export async function openRouterChat(messages: MiraMessage[], options: ChatOptions = {}) {
+export async function openRouterChat(messages: UltronXMessage[], options: ChatOptions = {}) {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured");
     const model = process.env.OPENROUTER_MODEL || "openrouter/free";
     if (model !== "openrouter/free") {
-        throw new Error("Mira only permits the free OpenRouter router: openrouter/free");
+        throw new Error("UltronX only permits the free OpenRouter router: openrouter/free");
     }
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -45,7 +45,7 @@ export async function openRouterChat(messages: MiraMessage[], options: ChatOptio
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": "http://localhost:4000",
-            "X-Title": "Mira",
+            "X-Title": "UltronX",
         },
         body: JSON.stringify({
             model,
@@ -64,7 +64,7 @@ export async function openRouterChat(messages: MiraMessage[], options: ChatOptio
 }
 
 export async function structuredOpenRouter<T>(
-    messages: MiraMessage[],
+    messages: UltronXMessage[],
     name: string,
     schema: z.ZodType<T>,
 ): Promise<T | null> {

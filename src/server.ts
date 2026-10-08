@@ -10,7 +10,7 @@ const startServer = async (): Promise<void> => {
         await connectToDb();
 
         const server = app.listen(PORT, () => {
-            console.log(`Mira API running on http://localhost:${PORT}`);
+            console.log(`UltronX API running on http://localhost:${PORT}`);
         });
         const shutdown = async () => {
             server.close();
@@ -19,7 +19,7 @@ const startServer = async (): Promise<void> => {
         process.once("SIGTERM", shutdown);
         process.once("SIGINT", shutdown);
     } catch (error) {
-        console.error("Failed to start Mira:", error);
+        console.error("Failed to start UltronX:", error);
         process.exit(1);
     }
 };

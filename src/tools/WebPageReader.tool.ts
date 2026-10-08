@@ -1,8 +1,8 @@
 import { z } from "zod";
-import type { MiraTool } from "./types.js";
+import type { UltronXTool } from "./types.js";
 
 const readUrlSchema = z.object({ url: z.string().url() });
-export const readUrl: MiraTool<typeof readUrlSchema> = {
+export const readUrl: UltronXTool<typeof readUrlSchema> = {
     name: "webpage_reader",
     description: "Read the text content of a webpage URL.",
     schema: readUrlSchema,

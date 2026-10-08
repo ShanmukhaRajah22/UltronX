@@ -1,11 +1,11 @@
 import { z } from "zod";
-import type { MiraTool } from "./types.js";
+import type { UltronXTool } from "./types.js";
 
 const timeSchema = z.object({
     timezone: z.string().describe("IANA timezone, e.g. Asia/Kolkata"),
 });
 
-export const timeTool: MiraTool<typeof timeSchema> = {
+export const timeTool: UltronXTool<typeof timeSchema> = {
     name: "time",
     description: "Get the current time in a specific IANA timezone.",
     schema: timeSchema,

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { MemoryModel } from "../modules/memory/memory.model.js";
-import type { MiraTool } from "./types.js";
+import type { UltronXTool } from "./types.js";
 
 const memorySchema = z.object({
     type: z.enum(["fact", "preference", "goal", "project", "instruction", "language", "interaction_style"]),
@@ -9,7 +9,7 @@ const memorySchema = z.object({
     confidence: z.number().min(0).max(1),
 });
 
-export const saveMemoryTool: MiraTool<typeof memorySchema> = {
+export const saveMemoryTool: UltronXTool<typeof memorySchema> = {
     name: "memory",
     description: "Save a stable, useful long-term fact, preference, goal, project, instruction, language, or interaction style about the user.",
     schema: memorySchema,
